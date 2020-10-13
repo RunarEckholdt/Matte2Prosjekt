@@ -18,6 +18,26 @@ class Matrix():
         return self.__determinant(self.array)
         
             
+    def eigenValue(self):
+        if self.shape[0] != self.shape[1]:
+            raise Exception("Matrix must be of shape NxN to calculate eigenvalue")
+        I = generateIndentityMatrix(self.shape[0])
+        I = I * λ
+        A = Matrix(self.array.copy())
+        A = A-I
+        det = A.determinant()
+        if(type(det)!=sy.core.add.Add):
+            raise Exception("No eigenValue")
+        return sy.solve(det,λ)
+        
+    def eigenVector(self):
+        eigenValues = self.eigenValue()
+        I = generateIndentityMatrix(self.shape[0])
+        I = I * λ
+        A = Matrix(self.array.copy())
+        A = A-I
+        
+    
     
     def gaussianElimination(self):
         a = self.array.copy()
@@ -131,7 +151,7 @@ class Matrix():
     
     
     def __fetchNextDet(self,array,i,targetShape):
-        a = np.zeros(shape=(targetShape,targetShape))
+        a = np.zeros(shape=(targetShape,targetShape),dtype=sy.core.add.Add)
         f = 0
         #lager et nytt array som tar alle rader med unntak av rad i og tar ikke med første rad
         for j in range(targetShape):
@@ -167,7 +187,7 @@ class Matrix():
                 c+=1
         return a
     def __subRowAFromB(self,row1,row2,times=1):
-        output = np.zeros(len(row1))
+        output = np.zeros(len(row1),dtype=sy.core.add.Add)
         for i in range(len(row1)):
             output[i] = row2[i] - times*row1[i]
         return output
@@ -225,9 +245,9 @@ print(D)
 H = H * λ
 print(H)
 
-G = C - H
+det = C.eigenValue()
 
-print(G)
+
 
 #detA = A.determinant()
 
