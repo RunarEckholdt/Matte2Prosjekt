@@ -28,15 +28,20 @@ class Matrix():
         det = A.determinant()
         if(type(det)!=sy.core.add.Add):
             raise Exception("No eigenValue")
-        return sy.solve(det,λ)
+        return np.array(sy.solve(det,λ))
         
+    #returnerer egen verdiene og egenvektorene til matrisen i form av en array
+    #første possisjon i arrayen inneholder egenverdiene og andre inneholder de tilhørende egenvektorene
     def eigenVector(self):
         eigenValues = self.eigenValue()
         I = generateIndentityMatrix(self.shape[0])
         I = I * λ
-        A = Matrix(self.array.copy())
-        A = A-I
+        M = Matrix(self.array.copy())
+        M = M-I
+        eigenVectors = self.__calcEigenVectors(eigenValues,M)
+        return np.array([eigenValues,eigenVectors],dtype=np.ndarray)
         
+            
     
     
     def gaussianElimination(self):
@@ -203,7 +208,26 @@ class Matrix():
             c += 1
         return a
     
+    def __calcEigenVectors(self,eigenValues,M):
+        print(eigenValues,'\n\n')
+        eigenVectors = []
+        for e in eigenValues:
+            m = M.array.copy()
+            print(m,'\n')
+            m = Matrix(self.__subsEigenValue(m,eigenValue=e))
+            print(m,'\n')
+            m = m.gaussianElimination()
+            print(m,'\n')
+            eigenVectors.append(m.array)
+        print(eigenVectors[0,'\n'])
+        return np.array(eigenVectors,dtype=float)
     
+    def __subsEigenValue(self,M,eigenValue):
+        n,m = M.shape
+        for i in range(n):
+            for j in range(m):
+                M[i][j] = M[i][j].subs(λ,eigenValue)
+        return M
 
 def generateIndentityMatrix(shape=2):
     d = np.ones(shape)
@@ -223,8 +247,13 @@ B = Matrix([[0,1,0,2,2],
 
 
 C = Matrix([[1,0,1],
-            [0,1,0],
-            [1,0,1]])
+            [2,1,0],
+            [1,1,1]])
+
+
+K = np.array([[1,0,1],
+            [2,1,0],
+            [1,1,1]])
 
 F = Matrix([[1,0,0],
             [0,1,0],
@@ -235,19 +264,35 @@ F = Matrix([[1,0,0],
 
 λ = sy.Symbol('λ')
 
+m0 = np.array([[-2,-1,2,1],
+      [5,5,-5,5],
+      [6,8,2,4], 
+      [3,6,9,12]])
+
+#print(np.linalg.det(m0))
 
 
 
 H = generateIndentityMatrix(3)
 
 D = H * C
-print(D)
+#print(D)
 H = H * λ
-print(H)
-
-det = C.eigenValue()
+#print(H)
 
 
+
+#eigenVecs = C.eigenVector()
+#print(eigenVecs[0])
+eigenS = C.eigenValue()
+eigen = np.linalg.eig(K)
+for e in eigen[0]:
+    print(e)
+print('\n\n')    
+
+for e in eigenS:
+    print(e)
+print('\n\n') 
 
 #detA = A.determinant()
 
