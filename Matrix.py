@@ -29,7 +29,7 @@ class Matrix():
         if(type(det)!=sy.core.add.Add):
             raise Exception("No eigenValue")
         return np.array(sy.solve(det,λ))
-        
+    
     #returnerer egen verdiene og egenvektorene til matrisen i form av en array
     #første possisjon i arrayen inneholder egenverdiene og andre inneholder de tilhørende egenvektorene
     def eigenVector(self):
@@ -39,9 +39,9 @@ class Matrix():
         M = Matrix(self.array.copy())
         M = M-I
         eigenVectors = self.__calcEigenVectors(eigenValues,M)
-        return np.array([eigenValues,eigenVectors],dtype=np.ndarray)
+        return [eigenValues,eigenVectors]
         
-            
+    
     
     
     def gaussianElimination(self):
@@ -77,10 +77,8 @@ class Matrix():
     def __str__(self):
         s = ""
         for i in range(self.shape[0]):
-            
             for j in range(self.shape[1]):
-                s = s + str(self.array[i][j])
-                s = s + "             "
+                s = s + ("%20s" %(str(self.array[i][j])))
             s = s + "\n"
         return s
     
@@ -170,20 +168,33 @@ class Matrix():
         a,b = arr[0,:] #rad 1
         c,d = arr[1,:] #rad 2
         return a*d-b*c
+    
+    
 
+    
 
     def __echelonForm(self, a):
         m,n = a.shape
         r = 0
         c = 0
+        
+        
         while(r < m and c < n):
-            for i in range(r,m):
-                if(a[i][c] == 1): #hvis en av radene har en 1'er bytt.
-                    a[i,:] , a[r,:] = a[r,:] , a[i,:]
-                    break
-            if all(l == 0 for l in a[:,c]): #hvis alle er 0 hopp til neste kolonne
+            if all(l == 0 for l in a[r:,c]): #hvis alle er 0 hopp til neste kolonne
                 c += 1
-            else:
+                if c == n:
+                    break
+                
+            else:    
+                for i,v in enumerate(a[r:,c],start=r):
+                    if(v == 1): #hvis en av radene har en 1'er bytt.
+                        a[i,:] , a[r,:] = a[r,:] , a[i,:]
+                        break
+                if(a[r][c] == 0):
+                    index = np.argmax(a[r:,c]) + r  #index for største verdi i kolonne c fra rad r. + r for å få riktig index for hele kolonnen
+                    a[r,:] , a[index,:] = a[index,:], a[r,:]  
+                    
+                    
                 a[r,:]=a[r,:]/a[r][c]
                 for i in range(r+1,m):
                     f = a[i][c]
@@ -191,15 +202,20 @@ class Matrix():
                 r+=1
                 c+=1
         return a
+    
+    
     def __subRowAFromB(self,row1,row2,times=1):
         output = np.zeros(len(row1),dtype=sy.core.add.Add)
         for i in range(len(row1)):
             output[i] = row2[i] - times*row1[i]
         return output
+    
+    
     def __redusedEchelon(self,a):
         m,n = a.shape
         r = 1
         c = 1
+        
         while(r < m and c < n):
             for i in range(r-1,-1,-1):
                 f = a[i][c]
@@ -218,8 +234,9 @@ class Matrix():
             print(m,'\n')
             m = m.gaussianElimination()
             print(m,'\n')
-            eigenVectors.append(m.array)
-        print(eigenVectors[0,'\n'])
+            eigenVector = EigenVector(e,m.array)
+            eigenVectors.append(eigenVector)
+        
         return np.array(eigenVectors,dtype=float)
     
     def __subsEigenValue(self,M,eigenValue):
@@ -228,6 +245,19 @@ class Matrix():
             for j in range(m):
                 M[i][j] = M[i][j].subs(λ,eigenValue)
         return M
+    
+
+    
+    
+    
+class EigenVector():
+    def __init__(self,eigenValue,a):
+        self.eigenValue = eigenValue
+        a = a.copy()
+        m,n = a.shape
+        r = 0
+        c = 0
+
 
 def generateIndentityMatrix(shape=2):
     d = np.ones(shape)
@@ -246,10 +276,11 @@ B = Matrix([[0,1,0,2,2],
             [0,1,0,4,2]])
 
 
-C = Matrix([[1,0,1],
-            [2,1,0],
-            [1,1,1]])
+C = Matrix([[3,4],
+            [2,1]])
 
+Ca = np.array([[3,4],
+               [2,1]])
 
 K = np.array([[1,0,1],
             [2,1,0],
@@ -273,26 +304,39 @@ m0 = np.array([[-2,-1,2,1],
 
 
 
-H = generateIndentityMatrix(3)
+#H = generateIndentityMatrix(3)
 
-D = H * C
+Cred = C.gaussianElimination()
+CeigenVectors = C.eigenVector()
+
+
+    
+
+
+#D = H * C
 #print(D)
-H = H * λ
+#H = H * λ
 #print(H)
 
 
 
 #eigenVecs = C.eigenVector()
 #print(eigenVecs[0])
-eigenS = C.eigenValue()
-eigen = np.linalg.eig(K)
-for e in eigen[0]:
-    print(e)
-print('\n\n')    
+#eigenS = C.eigenValue()
+#eigen = np.linalg.eig(K)
 
-for e in eigenS:
-    print(e)
-print('\n\n') 
+# print(type(eigenS[0]))
+# print(type(eigen[0]))
+# for e in eigen[0]:
+#     print(e)
+# print('\n\n')    
+
+# for i in eigenVecs[1]:
+#     print(i)
+
+# for e in eigenS:
+#     print(e)
+# print('\n\n') 
 
 #detA = A.determinant()
 
