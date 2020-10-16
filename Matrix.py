@@ -7,6 +7,9 @@ Created on Sat Oct 10 18:22:52 2020
 import numpy as np
 import sympy as sy
 
+
+λ = sy.Symbol('λ')
+
 class Matrix():
     def __init__(self,array):
         self.array = np.array(array,dtype=sy.core.add.Add)
@@ -24,8 +27,12 @@ class Matrix():
         I = generateIndentityMatrix(self.shape[0])
         I = I * λ
         A = Matrix(self.array.copy())
+        # print("In public eigenValue function: ",A)
         A = A-I
+        # print("In public eigenValue function 2: ",A)
         det = A.determinant()
+        det = sy.expand(det)
+        print(det)
         if(type(det)!=sy.core.add.Add):
             raise Exception("No eigenValue")
         return np.array(sy.solve(det,λ))
@@ -54,6 +61,20 @@ class Matrix():
         a = self.array.copy()
         a = a.T
         return Matrix(a)
+    
+    def inverse(self):
+        a = self.array.copy()
+        m,n = a.shape
+        tmp = Matrix(np.zeros(shape=(m,n+m),dtype=float))
+        I = generateIndentityMatrix(m)
+        for i in range(m):
+            tmp.array[i,:] = np.append(a[i,:],I.array[i,:])
+        tmp = tmp.gaussianElimination()
+        print(tmp)
+        output = Matrix(np.zeros(shape=(m,n),dtype=float))
+        for i in range(m):
+            output.array[i,:] = tmp.array[i,m:]
+        return output
                     
      
     #overlastning av + operatoren
@@ -73,17 +94,22 @@ class Matrix():
                 output[i][j]=addend1[i][j]+addend2[i][j]
         return Matrix(output)
     
+
+    
     #overlasting av str() funksjonen for printing
     def __str__(self):
         s = ""
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
-                s = s + ("%20s" %(str(self.array[i][j])))
+                if(type(self.array[i][j]) == sy.core.numbers.Float or (type(self.array[i][j]) == np.float64)):
+                    s = s + "%17.3f" %(self.array[i][j])
+                else:
+                    s = s + ("%20s" %(str(self.array[i][j])))
             s = s + "\n"
         return s
     
     
-    
+
     
     #overlastning av * operatoren
     def __mul__(self,factor2):
@@ -179,35 +205,68 @@ class Matrix():
         c = 0
         
         
+        
         while(r < m and c < n):
             if all(l == 0 for l in a[r:,c]): #hvis alle er 0 hopp til neste kolonne
                 c += 1
                 if c == n:
-                    break
-                
-            else:    
+                    break        
+            else: 
+                for i in range(r,m):
+                    if(type(a[i][c]) == sy.core.add.Add):
+                        if(not a[i][c].is_real and sy.re(a[i][c]) == 0):
+                            print(a)
+                            a[i,:] = a[i,:]*sy.I
+                            for j in range(len(a[i,:])):
+                                print(a[i][j])
+                                a[i][j] = sy.expand(a[i][j])
+                                print(a[i][j])
+                            
                 for i,v in enumerate(a[r:,c],start=r):
                     if(v == 1): #hvis en av radene har en 1'er bytt.
-                        a[i,:] , a[r,:] = a[r,:] , a[i,:]
+                        a[i,:] , a[r,:] = a[r,:].copy() , a[i,:].copy()
                         break
                 if(a[r][c] == 0):
-                    index = np.argmax(a[r:,c]) + r  #index for største verdi i kolonne c fra rad r. + r for å få riktig index for hele kolonnen
-                    a[r,:] , a[index,:] = a[index,:], a[r,:]  
-                    
+                    index = np.argmax(abs(a[r:,c])) + r  #index for største verdi i kolonne c fra rad r. + r for å få riktig index for hele kolonnen
+                    a[r,:] , a[index,:] = a[index,:].copy(), a[r,:].copy()  
+                elif(type(a[i][c]) == sy.core.add.Add and not a[r][c].is_real):
+                    for i,v in enumerate(a[r:,c],start=r):
+                        if(v.is_real):
+                            a[i,:], a[r,:] = a[r,:].copy(), a[i,:].copy()
+                            break
                     
                 a[r,:]=a[r,:]/a[r][c]
                 for i in range(r+1,m):
-                    f = a[i][c]
+                    if type(a[i][c]) == sy.core.add.Add and not a[i][c].is_real:
+                        if sy.re(a[i][c]) == 0: #hvis den ikke har en reel del, gang med I
+                            a[i,:] = a[i,:]*sy.I
+                        f = sy.re(a[i][c])
+                    else:
+                        f = a[i][c]
+                    print("F =", f)
+                    print("\nBefore subtraction: \n", a,'\n')
                     a[i,:] = self.__subRowAFromB(a[r,:], a[i,:],f)
+                    print("\nAfter subtraction: \n", a,'\n')
+                    #hvis den nå ble kvitt den reelle delen og har en imaginær del, gjør det på nytt
+                    if(not a[i][c].is_real and sy.re(a[i][c]) == 0):
+                       a[i,:] = a[i,:]*sy.I
+                       f = a[i][c]
+                       print("\nBefore subtraction: \n", a,'\n')
+                       a[i,:] = self.__subRowAFromB(a[r,:], a[i,:],f)
+                       print("\nAfter subtraction: \n", a,'\n')
                 r+=1
                 c+=1
         return a
     
     
     def __subRowAFromB(self,row1,row2,times=1):
+        if(times == 0):
+            return row2.copy()
         output = np.zeros(len(row1),dtype=sy.core.add.Add)
+        #print("Subtracting",row1,"from", row2,times,"times")
         for i in range(len(row1)):
             output[i] = row2[i] - times*row1[i]
+            output[i] = sy.expand(output[i])
         return output
     
     
@@ -217,27 +276,30 @@ class Matrix():
         c = 1
         
         while(r < m and c < n):
-            for i in range(r-1,-1,-1):
-                f = a[i][c]
-                a[i,:] = self.__subRowAFromB(a[r,:], a[i,:], f)
-            r += 1
-            c += 1
+            if(a[r][c] == 0):
+                c+=1
+                
+            else:
+                #går fra current rad, ser oppover og gjør rad opperasjoner slik at de blir 0
+                for i in range(r-1,-1,-1): 
+                    f = a[i][c]
+                    a[i,:] = self.__subRowAFromB(a[r,:], a[i,:], f)
+                r += 1
+                c += 1
         return a
     
     def __calcEigenVectors(self,eigenValues,M):
-        print(eigenValues,'\n\n')
         eigenVectors = []
         for e in eigenValues:
             m = M.array.copy()
-            print(m,'\n')
             m = Matrix(self.__subsEigenValue(m,eigenValue=e))
-            print(m,'\n')
+            #print("In __calcEigenVector function: ",m)
             m = m.gaussianElimination()
-            print(m,'\n')
+            #print("In __calcEigenVector function after gaus: ",m)
             eigenVector = EigenVector(e,m.array)
             eigenVectors.append(eigenVector)
         
-        return np.array(eigenVectors,dtype=float)
+        return eigenVectors
     
     def __subsEigenValue(self,M,eigenValue):
         n,m = M.shape
@@ -247,16 +309,79 @@ class Matrix():
         return M
     
 
-    
+  
+
+  
     
     
 class EigenVector():
     def __init__(self,eigenValue,a):
+        #print("Eigenvalue =", eigenValue)
+        #print("Reduced matrix = ", a)
+        self.a = a.copy()
         self.eigenValue = eigenValue
-        a = a.copy()
+        self.symbols = sy.symbols('x y z a b c d e f g h i j k l m n o p q r s t u v w')
+        a = a.copy().astype(sy.core.add.Add)
+        m,n = a.shape
+        
+        for i in range(n):
+            a[:,i] = a[:,i]*self.symbols[i]
+        
+        
+        self.expressions = self.__extractExpressions(a)
+        
+    
+    # def asMatrix(self):
+    #     m,n = self.a.shape
+    #     for i in range(n):
+    #         a = self.a.copy()
+    #         a[:,i] = a[:,i]*self.symbols[i]
+        
+        
+        
+    def __extractExpressions(self,a):
+        
+        expressions = []
         m,n = a.shape
         r = 0
         c = 0
+        while(r < m and c < n):
+            if(a[r][c] == 1.0*self.symbols[c] or a[r][c] == self.symbols[c]):
+                if(c+1 >= n):
+                    expressions.append([self.symbols[c]])
+                else:
+                    tmp = a[r,c+1:].copy()*-1
+                    tmp = tmp[tmp!=0]
+                    
+                    if(len(tmp) == 0):
+                        expressions.append([0])
+                    else:
+                        expressions.append(tmp)
+                    
+                c+=1
+                r+=1
+            elif(a[r][c] == 0):
+                expressions.append([self.symbols[c]])
+                c+=1
+            else:
+                c+=1
+                r+=1
+        return expressions
+    
+    def __str__(self):
+        if(type(self.eigenValue) == sy.core.add.Add):
+            s = "Eigenvalue = %10s \n" %(self.eigenValue)
+        else:
+            s = "Eigenvalue = %.3f \n" %(self.eigenValue)
+        s += "Eigenvector = {\n"
+        for i in range(len(self.expressions)):
+            s+= "%s = %s\n" %(self.symbols[i],self.expressions[i])
+        s+="}"
+        return s
+        
+            
+        
+        
 
 
 def generateIndentityMatrix(shape=2):
@@ -266,39 +391,45 @@ def generateIndentityMatrix(shape=2):
 
     
 
-A = Matrix([[3.0,7.0,3.0,2.0,3.0,4.0],
-            [4.0,2.0,9.0,2.0,3.0,2.0],
-            [7.0,0.0,1.0,2.0,3.0,1.0],
-            [2.0,2.0,2.0,2.0,3.0,3.0],
-            [3.0,3.0,3.0,3.0,3.0,2.0]])
-B = Matrix([[0,1,0,2,2],
-            [1,0,1,2,2],
-            [0,1,0,4,2]])
+# A = Matrix([[3.0,7.0,3.0,2.0,3.0,4.0],
+#             [4.0,2.0,9.0,2.0,3.0,2.0],
+#             [7.0,0.0,1.0,2.0,3.0,1.0],
+#             [2.0,2.0,2.0,2.0,3.0,3.0],
+#             [3.0,3.0,3.0,3.0,3.0,2.0]])
+# B = Matrix([[0,1,0,2,2],
+#             [1,0,1,2,2],
+#             [0,1,0,4,2]])
 
 
-C = Matrix([[3,4],
-            [2,1]])
+C = Matrix([[1,2],
+            [3,4]])
 
-Ca = np.array([[3,4],
-               [2,1]])
+invC = C.inverse()
+print(invC)
 
-K = np.array([[1,0,1],
-            [2,1,0],
-            [1,1,1]])
+# Ca = np.array([[3,4],
+#                [2,1]])
 
-F = Matrix([[1,0,0],
-            [0,1,0],
-            [0,0,1],
-            [0,0,0],
-            [0,0,0]])
+K = Matrix([[1,4,7,9],
+            [4,5,6,7],
+            [7,8,9,10]])
 
 
-λ = sy.Symbol('λ')
 
-m0 = np.array([[-2,-1,2,1],
-      [5,5,-5,5],
-      [6,8,2,4], 
-      [3,6,9,12]])
+
+
+# F = Matrix([[1,0,0],
+#             [0,1,0],
+#             [0,0,1],
+#             [0,0,0],
+#             [0,0,0]])
+
+
+
+# m0 = np.array([[-2,-1,2,1],
+#       [5,5,-5,5],
+#       [6,8,2,4], 
+#       [3,6,9,12]])
 
 #print(np.linalg.det(m0))
 
@@ -306,11 +437,41 @@ m0 = np.array([[-2,-1,2,1],
 
 #H = generateIndentityMatrix(3)
 
-Cred = C.gaussianElimination()
-CeigenVectors = C.eigenVector()
+# a = np.array([[0,1,-2],
+#             [1,1,-1],
+#             [-2,-1,0]])
+
+# r = 0
+# c = 0
 
 
-    
+
+# for i,v in enumerate(a[r:,c],start=r):
+#     if(v == 1): #hvis en av radene har en 1'er bytt.
+#         a[i,:] , a[r,:] = a[r,:].copy() , a[i,:].copy()
+
+
+# potet = np.array([[1,2,3],
+#                  [4,5,6],
+#                  [7,8,9]])
+
+# potet[0],potet[2] = potet[2].copy(), potet[0].copy()
+
+# print(potet)
+
+
+# KG = K.gaussianElimination()
+# print(KG)
+
+# print(a)
+
+#Cred = C.gaussianElimination()
+# CeigenVectors = C.eigenVector()
+
+# for vec in CeigenVectors[1]:
+#     print(vec)
+
+
 
 
 #D = H * C
