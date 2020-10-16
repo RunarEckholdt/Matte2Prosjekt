@@ -27,9 +27,7 @@ class Matrix():
         I = generateIndentityMatrix(self.shape[0])
         I = I * λ
         A = Matrix(self.array.copy())
-        # print("In public eigenValue function: ",A)
         A = A-I
-        # print("In public eigenValue function 2: ",A)
         det = A.determinant()
         det = sy.expand(det)
         print(det)
@@ -70,7 +68,6 @@ class Matrix():
         for i in range(m):
             tmp.array[i,:] = np.append(a[i,:],I.array[i,:])
         tmp = tmp.gaussianElimination()
-        print(tmp)
         output = Matrix(np.zeros(shape=(m,n),dtype=float))
         for i in range(m):
             output.array[i,:] = tmp.array[i,m:]
@@ -215,12 +212,9 @@ class Matrix():
                 for i in range(r,m):
                     if(type(a[i][c]) == sy.core.add.Add):
                         if(not a[i][c].is_real and sy.re(a[i][c]) == 0):
-                            print(a)
                             a[i,:] = a[i,:]*sy.I
                             for j in range(len(a[i,:])):
-                                print(a[i][j])
                                 a[i][j] = sy.expand(a[i][j])
-                                print(a[i][j])
                             
                 for i,v in enumerate(a[r:,c],start=r):
                     if(v == 1): #hvis en av radene har en 1'er bytt.
@@ -243,17 +237,12 @@ class Matrix():
                         f = sy.re(a[i][c])
                     else:
                         f = a[i][c]
-                    print("F =", f)
-                    print("\nBefore subtraction: \n", a,'\n')
                     a[i,:] = self.__subRowAFromB(a[r,:], a[i,:],f)
-                    print("\nAfter subtraction: \n", a,'\n')
                     #hvis den nå ble kvitt den reelle delen og har en imaginær del, gjør det på nytt
                     if(not a[i][c].is_real and sy.re(a[i][c]) == 0):
                        a[i,:] = a[i,:]*sy.I
                        f = a[i][c]
-                       print("\nBefore subtraction: \n", a,'\n')
                        a[i,:] = self.__subRowAFromB(a[r,:], a[i,:],f)
-                       print("\nAfter subtraction: \n", a,'\n')
                 r+=1
                 c+=1
         return a
@@ -263,7 +252,6 @@ class Matrix():
         if(times == 0):
             return row2.copy()
         output = np.zeros(len(row1),dtype=sy.core.add.Add)
-        #print("Subtracting",row1,"from", row2,times,"times")
         for i in range(len(row1)):
             output[i] = row2[i] - times*row1[i]
             output[i] = sy.expand(output[i])
@@ -293,9 +281,7 @@ class Matrix():
         for e in eigenValues:
             m = M.array.copy()
             m = Matrix(self.__subsEigenValue(m,eigenValue=e))
-            #print("In __calcEigenVector function: ",m)
             m = m.gaussianElimination()
-            #print("In __calcEigenVector function after gaus: ",m)
             eigenVector = EigenVector(e,m.array)
             eigenVectors.append(eigenVector)
         
@@ -316,8 +302,6 @@ class Matrix():
     
 class EigenVector():
     def __init__(self,eigenValue,a):
-        #print("Eigenvalue =", eigenValue)
-        #print("Reduced matrix = ", a)
         self.a = a.copy()
         self.eigenValue = eigenValue
         self.symbols = sy.symbols('x y z a b c d e f g h i j k l m n o p q r s t u v w')
@@ -390,6 +374,8 @@ def generateIndentityMatrix(shape=2):
     return Matrix(i)
 
     
+
+
 
 
 
